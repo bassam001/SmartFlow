@@ -1,0 +1,61 @@
+name: Build and deploy - SmartFlow (Web)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
+      - name: Restore
+        run: dotnet restore src/SmartFlow.Wep/SmartFlow.Wep.csproj
+
+      - name: Publish
+        run: dotnet publish src/SmartFlow.Wep/SmartFlow.Wep.csproj -c Release -o "${{ env.DOTNET_ROOT }}/myapp"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-app
+          path: ${{ env.DOTNET_ROOT }}/myapp
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-app
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_21EFECBB228F4EB7B1DB23C851CA2191 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_1BFDD7968BAB47C49CD3981206B76C39 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7244150025B14D4581A884AEE72C0B6B }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: SmartFlow
+          slot-name: Production
+          package: .
