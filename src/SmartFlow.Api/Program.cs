@@ -79,11 +79,19 @@ public partial class Program
 
         app.UseSerilogRequestLogging();
 
+
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<SmartFlowDbContext>();
+            db.Database.Migrate();
+        }
+
 
         app.UseAuthentication();
         app.UseAuthorization();
