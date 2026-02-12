@@ -1,0 +1,57 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+
+<div style="display:flex; align-items:center; justify-content:center; min-height:70vh;">
+    <div style="max-width:720px; width:100%; background:white; border-radius:16px; padding:28px; box-shadow:0 10px 30px rgba(0,0,0,.08);">
+        <div style="display:flex; gap:14px; align-items:center;">
+            <div style="width:44px; height:44px; border-radius:12px; background:#1e40af;"></div>
+            <div>
+                <div style="font-size:22px; font-weight:800;">Welcome to SmartFlow</div>
+                <div style="opacity:.75;">Tasks + notes in one calm place.</div>
+            </div>
+        </div>
+
+        <div style="margin-top:18px; line-height:1.6; opacity:.85;">
+            Sign in to see your dashboard, or create a new account.
+        </div>
+
+        <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button @onclick="GoLogin"
+                    style="background:#1e40af; color:white; border:0; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer;">
+                Login
+            </button>
+
+            <button @onclick="GoRegister"
+                    style="background:#eef2ff; color:#1e40af; border:0; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer;">
+                Register
+            </button>
+        </div>
+
+        @if (_checking)
+        {
+            <div style="margin-top:14px; opacity:.7;">Checking session…</div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _checking = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (state.User?.Identity?.IsAuthenticated == true)
+        {
+            Nav.NavigateTo("/dashboard", forceLoad: true);
+            return;
+        }
+
+        _checking = false;
+    }
+
+    private void GoLogin() => Nav.NavigateTo("/login");
+    private void GoRegister() => Nav.NavigateTo("/register");
+}

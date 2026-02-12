@@ -1,0 +1,283 @@
+﻿@rendermode InteractiveServer
+@page "/dashboard"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@using SmartFlow.Domain.Enums
+@inject SmartFlow.Wep.Services.TasksApiClient TasksApi
+
+<div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px;">
+    <div>
+        <h2 style="margin:0; font-size:28px; font-weight:800;">Dashboard</h2>
+        <div style="opacity:.75; margin-top:4px;">Your tasks at a glance.</div>
+    </div>
+
+    <button @onclick="ToggleCreate"
+            style="background:#1e40af; color:white; border:0; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer;">
+        @( _showCreate ? "Close" : "+ New Task" )
+    </button>
+</div>
+
+@if (_error is not null)
+{
+    <div style="background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; padding:12px 14px; border-radius:12px; margin-bottom:14px;">
+        @_error
+    </div>
+}
+
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+    <div style="background:white; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.06);">
+        <div style="font-weight:800; margin-bottom:6px;">Tasks</div>
+        <div style="opacity:.75;">@(_tasks?.Count ?? 0) total</div>
+    </div>
+
+    <div style="background:white; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.06);">
+        <div style="font-weight:800; margin-bottom:6px;">Focus</div>
+
+        @if (_focus is null)
+        {
+            <div style="opacity:.75;">Loading focus…</div>
+        }
+        else if (_focus.Count == 0)
+        {
+            <div style="opacity:.75;">No focus tasks yet.</div>
+        }
+        else
+        {
+            <ol style="margin:0; padding-left:18px;">
+                @foreach (var f in _focus)
+                {
+                    <li style="margin:6px 0;">
+                        <span style="font-weight:800;">@f.Title</span>
+                        <span style="opacity:.7; font-size:13px;">
+                            — @f.Status, @f.Priority
+                            @if (f.DueDate is not null)
+                            {
+                                <text> • due @f.DueDate.Value.ToString("yyyy-MM-dd")</text>
+                            }
+                        </span>
+                    </li>
+                }
+            </ol>
+
+            <button @onclick="ReloadFocus"
+                    style="margin-top:10px; background:#eef2ff; color:#1e40af; border:0; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer;">
+                Recalculate
+            </button>
+        }
+    </div>
+</div>
+
+@if (_showCreate)
+{
+    <div style="background:white; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.06); margin-bottom:16px;">
+        <div style="font-weight:800; margin-bottom:12px;">Create a new task</div>
+
+        <EditForm Model="_create" OnValidSubmit="CreateTask" FormName="create-task">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div style="display:grid; gap:10px;">
+                <div>
+                    <label style="display:block; font-weight:700; margin-bottom:6px;">Title</label>
+                    <InputText @bind-Value="_create.Title"
+                               style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb;" />
+                </div>
+
+                <div>
+                    <label style="display:block; font-weight:700; margin-bottom:6px;">Description</label>
+                    <InputTextArea @bind-Value="_create.Description"
+                                   style="width:100%; min-height:90px; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb;" />
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label style="display:block; font-weight:700; margin-bottom:6px;">Due date</label>
+                        <InputDate @bind-Value="_create.DueDate"
+                                   style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb;" />
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-weight:700; margin-bottom:6px;">Priority</label>
+                        <InputSelect @bind-Value="_create.Priority"
+                                     style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb;">
+                            <option value="@TaskPriority.Low">Low</option>
+                            <option value="@TaskPriority.Medium">Medium</option>
+                            <option value="@TaskPriority.High">High</option>
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display:block; font-weight:700; margin-bottom:6px;">Status</label>
+                    <InputSelect @bind-Value="_create.Status"
+                                 style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb;">
+                        <option value="@StatusOfTask.Todo">Todo</option>
+                        <option value="@StatusOfTask.InProgress">In Progress</option>
+                        <option value="@StatusOfTask.Done">Done</option>
+                    </InputSelect>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:4px;">
+                    <button type="submit"
+                            disabled="@_saving"
+                            style="background:#1e40af; color:white; border:0; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer;">
+                        @(_saving ? "Saving..." : "Create")
+                    </button>
+
+                    <button type="button"
+                            @onclick="ToggleCreate"
+                            style="background:#f3f4f6; color:#111827; border:0; border-radius:12px; padding:10px 14px; font-weight:700; cursor:pointer;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+}
+
+<div style="background:white; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.06);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-weight:800;">Your tasks</div>
+        <button @onclick="Reload"
+                style="background:#eef2ff; color:#1e40af; border:0; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer;">
+            Refresh
+        </button>
+    </div>
+
+    @if (_loading)
+    {
+        <p style="opacity:.75;">Loading...</p>
+    }
+    else if (_tasks is null || _tasks.Count == 0)
+    {
+        <div style="opacity:.75; line-height:1.6;">
+            No tasks yet. Click <b>New Task</b> to create your first one.
+        </div>
+    }
+    else
+    {
+        <div style="display:grid; gap:10px;">
+            @foreach (var t in _tasks)
+            {
+                <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px;">
+                    <div style="display:flex; justify-content:space-between; gap:12px;">
+                        <div style="font-weight:800;">@t.Title</div>
+                        <div style="opacity:.65; font-size:13px;">
+                            @t.Status • @t.Priority
+                        </div>
+                    </div>
+
+                    <div style="opacity:.75; margin-top:6px;">@t.Description</div>
+
+                    <div style="opacity:.65; margin-top:8px; font-size:13px;">
+                        Due: @t.DueDate!.Value.ToString("yyyy-MM-dd")
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<TasksApiClient.TaskDto>? _tasks;
+    private List<TasksApiClient.TaskDto>? _focus;
+
+    private bool _loading = true;
+    private bool _showCreate;
+    private bool _saving;
+    private string? _error;
+
+    private CreateTaskModel _create = new();
+
+    private sealed class CreateTaskModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Title { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Description { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public DateTime? DueDate { get; set; } = DateTime.Today;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public TaskPriority Priority { get; set; } = TaskPriority.Medium;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public StatusOfTask Status { get; set; } = StatusOfTask.Todo;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+        await ReloadFocus();
+    }
+
+    private void ToggleCreate()
+    {
+        _showCreate = !_showCreate;
+        _error = null;
+
+        if (_showCreate)
+            _create = new CreateTaskModel();
+    }
+
+    private async Task Reload()
+    {
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            _tasks = await TasksApi.GetTasksAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ReloadFocus()
+    {
+        try
+        {
+            _focus = await TasksApi.GetFocusAsync(3) ?? new();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task CreateTask()
+    {
+        _error = null;
+        _saving = true;
+
+        try
+        {
+            await TasksApi.CreateTaskAsync(
+                _create.Title,
+                _create.Description,
+                _create.DueDate!.Value,
+                _create.Priority,
+                _create.Status
+            );
+
+            _showCreate = false;
+            await Reload();
+            await ReloadFocus();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

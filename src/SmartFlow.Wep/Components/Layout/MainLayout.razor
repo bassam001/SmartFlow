@@ -1,0 +1,70 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
+@inject IHttpClientFactory Factory
+
+<div style="min-height:100vh; background:#f6f9ff;">
+    <header style="background:#1e40af; color:white; padding:16px 24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <button @onclick="GoHome"
+                        style="background:transparent; border:0; color:white; font-size:20px; font-weight:800; cursor:pointer;">
+                    SmartFlow
+                </button>
+
+                <button @onclick="GoDashboard"
+                        style="background:rgba(255,255,255,.12); border:0; color:white; border-radius:10px; padding:8px 12px; font-weight:700; cursor:pointer;">
+                    Dashboard
+                </button>
+            </div>
+
+            @if (_isAuthenticated)
+            {
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="opacity:.9; font-weight:700;">
+                        @_email
+                    </div>
+
+                    <button @onclick="Logout"
+                            style="background:#ffffff; color:#1e40af; border:0; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer;">
+                        Logout
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div style="opacity:.9; font-weight:700;">Guest</div>
+            }
+        </div>
+        <div style="opacity:.9; margin-top:6px;">Organize your tasks & notes, calmly.</div>
+    </header>
+
+    <main style="max-width:1000px; margin:0 auto; padding:24px;">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool _isAuthenticated;
+    private string _email = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+
+        _isAuthenticated = user?.Identity?.IsAuthenticated == true;
+        _email = user?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                ?? user?.Identity?.Name
+                ?? "";
+    }
+
+    private void GoHome() => Nav.NavigateTo("/", forceLoad: true);
+    private void GoDashboard() => Nav.NavigateTo("/dashboard", forceLoad: true);
+
+    private async Task Logout()
+    {
+        Nav.NavigateTo("/logout", forceLoad: true);
+    }
+}

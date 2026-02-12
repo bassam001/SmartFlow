@@ -1,0 +1,87 @@
+﻿@rendermode InteractiveServer
+@page "/login"
+@using System.IdentityModel.Tokens.Jwt
+@using System.Security.Claims
+@inject SmartFlow.Wep.Services.AuthApiClient AuthApi
+@inject IHttpClientFactory Factory
+@inject NavigationManager Nav
+
+<h3>Login</h3>
+
+<EditForm Model="_model" OnValidSubmit="OnLogin" FormName="login">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Email</label>
+        <InputText @bind-Value="_model.Email" />
+    </div>
+
+    <div>
+        <label>Password</label>
+        <InputText @bind-Value="_model.Password" type="password" />
+    </div>
+
+    <button type="submit">Sign in</button>
+</EditForm>
+
+<p style="margin-top:12px; opacity:.8;">
+    No account? <a href="/register">Create one</a>
+</p>
+
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div style="background:#fff1f2; border:1px solid #fecdd3; color:#9f1239; padding:12px 14px; border-radius:12px; margin-bottom:12px;">
+        @_error
+    </div>
+} 
+
+
+@code {
+    private LoginModel _model = new();
+    private string? _error;
+
+    private sealed class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Password { get; set; } = "";
+    }
+
+    private async Task OnLogin()
+    {
+        _error = null;
+
+        try
+        {
+            var token = await AuthApi.LoginAsync(_model.Email, _model.Password);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                _error = "No token returned.";
+                return;
+            }
+
+            var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+            var userId = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value ?? "";
+            var email = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? _model.Email;
+
+     
+            var url =
+                $"/ui-auth/signin" +
+                $"?userId={Uri.EscapeDataString(userId)}" +
+                $"&email={Uri.EscapeDataString(email)}" +
+                $"&token={Uri.EscapeDataString(token)}" +
+                $"&returnUrl={Uri.EscapeDataString("/dashboard")}";
+
+            Nav.NavigateTo(url, forceLoad: true);
+
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+}

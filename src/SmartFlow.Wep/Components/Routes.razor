@@ -1,0 +1,34 @@
+﻿
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Nav
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(SmartFlow.Wep.Components.Layout.MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </Found>
+
+        <NotFound>
+            <LayoutView Layout="@typeof(SmartFlow.Wep.Components.Layout.MainLayout)">
+                <p>Page not found.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    private sealed class RedirectToLogin : ComponentBase
+    {
+        [Inject] private NavigationManager Nav { get; set; } = default!;
+
+        protected override void OnInitialized()
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+        }
+    }
+}
