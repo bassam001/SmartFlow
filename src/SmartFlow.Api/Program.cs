@@ -1,13 +1,14 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using SmartFlow.Api.Services;
 using SmartFlow.Application.Interfaces;
 using SmartFlow.Infrastructure.Persistence;
 using SmartFlow.Infrastructure.Repositories;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 
@@ -25,9 +26,13 @@ public partial class Program
         builder.Services.AddSwaggerGen();
 
 
-        builder.Services.AddDbContext<SmartFlowDbContext>(opt =>
-            opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Services.AddDbContext<SmartFlowDbContext>(options =>
+        {
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 
+            options.ConfigureWarnings(w =>
+                w.Ignore(RelationalEventId.PendingModelChangesWarning));
+        });
 
         // DI
         builder.Services.AddScoped<ITaskRepository, TaskRepository>();
