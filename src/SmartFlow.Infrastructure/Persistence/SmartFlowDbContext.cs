@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SmartFlow.Domain.Entities;
 
@@ -14,6 +15,12 @@ public sealed class SmartFlowDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(SmartFlowDbContext).Assembly);
+        modelBuilder.Entity<ApplicationUser>()
+        .Property(x => x.Id)
+        .HasMaxLength(450);
+
+        modelBuilder.Entity<IdentityRole>()
+            .Property(x => x.Id)
+            .HasMaxLength(450);
     }
 }
