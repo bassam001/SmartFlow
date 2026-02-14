@@ -35,10 +35,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddScoped<AuthenticationStateProvider, HttpContextAuthStateProvider>();
 
 builder.Services.AddHttpClient("Ui", (sp, client) =>
 {
@@ -62,6 +60,9 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<TasksApiClient>();
+builder.Services.AddScoped<CircuitAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+    sp.GetRequiredService<CircuitAuthStateProvider>());
 
 var app = builder.Build();
 
