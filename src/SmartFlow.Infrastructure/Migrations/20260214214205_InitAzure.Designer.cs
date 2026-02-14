@@ -12,7 +12,7 @@ using SmartFlow.Infrastructure.Persistence;
 namespace SmartFlow.Infrastructure.Migrations
 {
     [DbContext(typeof(SmartFlowDbContext))]
-    [Migration("20260214172529_InitAzure")]
+    [Migration("20260214214205_InitAzure")]
     partial class InitAzure
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace SmartFlow.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
