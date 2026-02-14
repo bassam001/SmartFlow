@@ -5,7 +5,8 @@ using SmartFlow.Domain.Entities;
 
 namespace SmartFlow.Infrastructure.Persistence;
 
-public sealed class SmartFlowDbContext : IdentityDbContext<ApplicationUser>
+public sealed class SmartFlowDbContext
+    : IdentityDbContext<ApplicationUser, IdentityRole, string>
 {
     public SmartFlowDbContext(DbContextOptions<SmartFlowDbContext> options) : base(options) { }
 
@@ -15,12 +16,14 @@ public sealed class SmartFlowDbContext : IdentityDbContext<ApplicationUser>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<ApplicationUser>()
-        .Property(x => x.Id)
-        .HasMaxLength(450);
+            .Property(x => x.Id)
+            .HasMaxLength(450);
 
         modelBuilder.Entity<IdentityRole>()
             .Property(x => x.Id)
             .HasMaxLength(450);
     }
 }
+

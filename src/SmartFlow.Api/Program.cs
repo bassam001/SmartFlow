@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using SmartFlow.Api.Services;
@@ -10,7 +9,6 @@ using SmartFlow.Application.Interfaces;
 using SmartFlow.Infrastructure.Persistence;
 using SmartFlow.Infrastructure.Repositories;
 using System.Text;
-
 
 public partial class Program
 {
@@ -28,25 +26,24 @@ public partial class Program
 
         builder.Services.AddDbContext<SmartFlowDbContext>(options =>
         {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+            var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(conn))
+                throw new InvalidOperationException("Missing connection string: DefaultConnection");
 
-            options.ConfigureWarnings(w =>
-                w.Ignore(RelationalEventId.PendingModelChangesWarning));
+            options.UseSqlServer(conn);
         });
 
-        // DI
+
         builder.Services.AddScoped<ITaskRepository, TaskRepository>();
         builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+        builder.Services.AddHttpContextAccessor();
 
-        // MediatR (scan Application assembly)
+
         builder.Services.AddMediatR(cfg =>
             cfg.RegisterServicesFromAssembly(typeof(SmartFlow.Application.DTOs.TaskDto).Assembly));
 
-        // FluentValidation auto
+
         builder.Services.AddValidatorsFromAssembly(typeof(SmartFlow.Application.DTOs.TaskDto).Assembly);
-
-
-        builder.Services.AddHttpContextAccessor();
 
         builder.Services
             .AddIdentityCore<ApplicationUser>(options =>
@@ -57,10 +54,23 @@ public partial class Program
                 options.Password.RequireDigit = false;
                 options.Password.RequiredLength = 6;
             })
-            .AddEntityFrameworkStores<SmartFlowDbContext>();
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<SmartFlowDbContext>()
+            .AddDefaultTokenProviders();
 
+        // JWT (fail fast if missing)
         var jwtSection = builder.Configuration.GetSection("Jwt");
-        var key = jwtSection["Key"]!;
+        var issuer = jwtSection["Issuer"];
+        var audience = jwtSection["Audience"];
+        var key = jwtSection["Key"];
+
+        if (string.IsNullOrWhiteSpace(issuer) ||
+            string.IsNullOrWhiteSpace(audience) ||
+            string.IsNullOrWhiteSpace(key))
+        {
+            throw new InvalidOperationException(
+                "Missing JWT settings. Required: Jwt__Issuer, Jwt__Audience, Jwt__Key");
+        }
 
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -72,9 +82,12 @@ public partial class Program
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtSection["Issuer"],
-                    ValidAudience = jwtSection["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+
+                    ValidIssuer = issuer,
+                    ValidAudience = audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+
+                    ClockSkew = TimeSpan.FromMinutes(2)
                 };
             });
 
@@ -84,6 +97,10 @@ public partial class Program
 
         app.UseSerilogRequestLogging();
 
+        if (!app.Environment.IsProduction())
+        {
+            app.UseDeveloperExceptionPage();
+        }
 
         if (app.Environment.IsDevelopment())
         {
@@ -91,13 +108,7 @@ public partial class Program
             app.UseSwaggerUI();
         }
 
-        using (var scope = app.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<SmartFlowDbContext>();
-            db.Database.EnsureCreated();
-        }
-
-
+ 
         app.UseAuthentication();
         app.UseAuthorization();
 
