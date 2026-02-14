@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using SmartFlow.Wep.Auth;
 
 namespace SmartFlow.Wep.Controllers;
 
@@ -35,6 +36,7 @@ public sealed class UiAuthController : ControllerBase
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
         _authState.SetUser(principal);
+
         return LocalRedirect(returnUrl);
     }
 
@@ -43,7 +45,7 @@ public sealed class UiAuthController : ControllerBase
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         _authState.ClearUser();
+
         return LocalRedirect(returnUrl);
     }
-
 }

@@ -18,7 +18,7 @@ public sealed class JwtAuthStateProvider : AuthenticationStateProvider
         var handler = new JwtSecurityTokenHandler();
         var jwt = handler.ReadJwtToken(_store.Token);
 
-        var identity = new ClaimsIdentity(jwt.Claims, authenticationType: "jwt");
+        var identity = new ClaimsIdentity(jwt.Claims, "jwt");
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
     }
 

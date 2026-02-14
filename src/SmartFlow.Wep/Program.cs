@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using SmartFlow.Wep.Auth;
 using SmartFlow.Wep.Components;
 using SmartFlow.Wep.Services;
-using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,8 +14,12 @@ builder.Services.AddRazorComponents()
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 
+var home = Environment.GetEnvironmentVariable("HOME");
+var keysPath = Path.Combine(home ?? builder.Environment.ContentRootPath, "DataProtectionKeys");
+Directory.CreateDirectory(keysPath);
+
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(@"C:\home\DataProtectionKeys"))
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
     .SetApplicationName("SmartFlow");
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -27,7 +30,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
         options.Cookie.Name = "__Host-SmartFlow.Auth";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SameSite = SameSiteMode.None;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
@@ -36,7 +39,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
-
 
 builder.Services.AddHttpClient("Ui", (sp, client) =>
 {
@@ -60,20 +62,19 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<TasksApiClient>();
+
 builder.Services.AddScoped<CircuitAuthStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
-    sp.GetRequiredService<CircuitAuthStateProvider>());
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CircuitAuthStateProvider>());
+
+builder.Services.AddScoped<TokenStore>();
+builder.Services.AddScoped<JwtAuthStateProvider>();
 
 var app = builder.Build();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-    KnownProxies = { },
-    KnownNetworks = { }
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
-
-app.UseHttpsRedirection();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -81,7 +82,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseRouting();
 app.UseAntiforgery();
 
 app.UseAuthentication();
