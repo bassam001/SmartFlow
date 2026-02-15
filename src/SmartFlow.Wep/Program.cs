@@ -30,45 +30,31 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
         options.Cookie.Name = "__Host-SmartFlow.Auth";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+        if (builder.Environment.IsDevelopment())
+        {
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        }
+        else
+        {
+            options.Cookie.SameSite = SameSiteMode.None;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        }
 
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
     });
 
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession(options =>
-{
-    options.Cookie.Name = ".SmartFlow.Session";
-    options.Cookie.HttpOnly = true;
-
-    if (builder.Environment.IsDevelopment())
-    {
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    }
-    else
-    {
-        options.Cookie.SameSite = SameSiteMode.None;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    }
-});
-
-
-
-builder.Services.AddHttpClient("Ui", (sp, client) =>
-{
-    var http = sp.GetRequiredService<IHttpContextAccessor>().HttpContext!;
-    client.BaseAddress = new Uri($"{http.Request.Scheme}://{http.Request.Host}/");
-});
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AuthenticationStateProvider, Microsoft.AspNetCore.Components.Server.ServerAuthenticationStateProvider>();
 
 builder.Services.AddScoped<AuthHeaderHandler>();
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
 if (string.IsNullOrWhiteSpace(apiBaseUrl))
-
-    apiBaseUrl = "https://localhost:5194";
+    apiBaseUrl = "http://localhost:5207";
 
 builder.Services.AddHttpClient("Api", client =>
 {
@@ -80,14 +66,6 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<TasksApiClient>();
-
-builder.Services.AddScoped<AuthenticationStateProvider, Microsoft.AspNetCore.Components.Server.ServerAuthenticationStateProvider>();
-
-
-builder.Services.AddAuthorization();
-builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<TokenStore>();
-builder.Services.AddScoped<JwtAuthStateProvider>();
 
 var app = builder.Build();
 
@@ -106,7 +84,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

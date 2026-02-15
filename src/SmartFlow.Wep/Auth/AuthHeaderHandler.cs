@@ -1,21 +1,27 @@
 ﻿using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace SmartFlow.Wep.Auth;
 
 public sealed class AuthHeaderHandler : DelegatingHandler
 {
-    private readonly IHttpContextAccessor _http;
+    private readonly AuthenticationStateProvider _authStateProvider;
 
-    public AuthHeaderHandler(IHttpContextAccessor http) => _http = http;
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    public AuthHeaderHandler(AuthenticationStateProvider authStateProvider)
     {
-        var token = _http.HttpContext?.Session.GetString("access_token");
+        _authStateProvider = authStateProvider;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var state = await _authStateProvider.GetAuthenticationStateAsync();
+        var token = state.User.FindFirst("access_token")?.Value;
 
         if (!string.IsNullOrWhiteSpace(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        return base.SendAsync(request, cancellationToken);
+        return await base.SendAsync(request, cancellationToken);
     }
 }
