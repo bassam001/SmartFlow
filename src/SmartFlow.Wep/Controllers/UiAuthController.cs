@@ -19,12 +19,13 @@ public sealed class UiAuthController : ControllerBase
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, userId),
-            new(ClaimTypes.Email, email),
-            new("access_token", token)
+            new(ClaimTypes.Email, email)
         };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
+
+        HttpContext.Session.SetString("access_token", token);
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
@@ -34,6 +35,7 @@ public sealed class UiAuthController : ControllerBase
     [HttpGet("signout")]
     public async Task<IActionResult> SignOutGet([FromQuery] string returnUrl = "/")
     {
+        HttpContext.Session.Remove("access_token");
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return LocalRedirect(returnUrl);
     }
