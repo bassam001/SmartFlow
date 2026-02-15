@@ -1,24 +1,28 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http;
 
 namespace SmartFlow.Wep.Auth;
 
 public sealed class CircuitAuthStateProvider : AuthenticationStateProvider
 {
-    private AuthenticationState _state = new(new ClaimsPrincipal(new ClaimsIdentity()));
+    private readonly IHttpContextAccessor _http;
 
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
-        => Task.FromResult(_state);
-
-    public void SetUser(ClaimsPrincipal user)
+    public CircuitAuthStateProvider(IHttpContextAccessor http)
     {
-        _state = new AuthenticationState(user);
-        NotifyAuthenticationStateChanged(Task.FromResult(_state));
+        _http = http;
     }
 
-    public void ClearUser()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        _state = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
-        NotifyAuthenticationStateChanged(Task.FromResult(_state));
+        var user = _http.HttpContext?.User
+                   ?? new ClaimsPrincipal(new ClaimsIdentity());
+
+        return Task.FromResult(new AuthenticationState(user));
+    }
+
+    public void Notify()
+    {
+        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 }

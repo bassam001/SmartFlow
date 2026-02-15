@@ -35,7 +35,8 @@ public sealed class UiAuthController : ControllerBase
         var principal = new ClaimsPrincipal(identity);
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-        _authState.SetUser(principal);
+
+        _authState.Notify();
 
         return LocalRedirect(returnUrl);
     }
@@ -44,7 +45,8 @@ public sealed class UiAuthController : ControllerBase
     public async Task<IActionResult> SignOutGet([FromQuery] string returnUrl = "/")
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        _authState.ClearUser();
+
+        _authState.Notify();
 
         return LocalRedirect(returnUrl);
     }
