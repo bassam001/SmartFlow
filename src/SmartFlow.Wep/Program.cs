@@ -37,8 +37,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
     });
 
-builder.Services.AddAuthorization();
-builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddHttpClient("Ui", (sp, client) =>
 {
@@ -50,7 +48,8 @@ builder.Services.AddScoped<AuthHeaderHandler>();
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
 if (string.IsNullOrWhiteSpace(apiBaseUrl))
-    throw new InvalidOperationException("ApiBaseUrl is missing. Set it in appsettings or Azure App Service Configuration.");
+
+    apiBaseUrl = "https://localhost:5194";
 
 builder.Services.AddHttpClient("Api", client =>
 {
@@ -63,9 +62,11 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<TasksApiClient>();
 
-builder.Services.AddScoped<CircuitAuthStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CircuitAuthStateProvider>());
+builder.Services.AddScoped<AuthenticationStateProvider, Microsoft.AspNetCore.Components.Server.ServerAuthenticationStateProvider>();
 
+
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<TokenStore>();
 builder.Services.AddScoped<JwtAuthStateProvider>();
 
@@ -86,10 +87,11 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-app.UseAntiforgery();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseAntiforgery();
 
 app.MapControllers();
 

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using SmartFlow.Wep.Auth;
 
 namespace SmartFlow.Wep.Controllers;
 
@@ -10,13 +9,6 @@ namespace SmartFlow.Wep.Controllers;
 [Route("ui-auth")]
 public sealed class UiAuthController : ControllerBase
 {
-    private readonly CircuitAuthStateProvider _authState;
-
-    public UiAuthController(CircuitAuthStateProvider authState)
-    {
-        _authState = authState;
-    }
-
     [HttpGet("signin")]
     public async Task<IActionResult> SignIn(
         [FromQuery] string userId,
@@ -36,8 +28,6 @@ public sealed class UiAuthController : ControllerBase
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
-        _authState.Notify();
-
         return LocalRedirect(returnUrl);
     }
 
@@ -45,9 +35,6 @@ public sealed class UiAuthController : ControllerBase
     public async Task<IActionResult> SignOutGet([FromQuery] string returnUrl = "/")
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-        _authState.Notify();
-
         return LocalRedirect(returnUrl);
     }
 }
