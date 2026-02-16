@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
-using SmartFlow.Wep.Auth;
 using SmartFlow.Wep.Components;
 using SmartFlow.Wep.Services;
 
@@ -11,7 +10,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers();
 
 var home = Environment.GetEnvironmentVariable("HOME");
@@ -50,8 +48,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, Microsoft.AspNetCore.Components.Server.ServerAuthenticationStateProvider>();
 
-builder.Services.AddScoped<AuthHeaderHandler>();
-
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"];
 if (string.IsNullOrWhiteSpace(apiBaseUrl))
     apiBaseUrl = "http://localhost:5207";
@@ -59,8 +55,7 @@ if (string.IsNullOrWhiteSpace(apiBaseUrl))
 builder.Services.AddHttpClient("Api", client =>
 {
     client.BaseAddress = new Uri(apiBaseUrl);
-})
-.AddHttpMessageHandler<AuthHeaderHandler>();
+});
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
 
